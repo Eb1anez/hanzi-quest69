@@ -119,13 +119,9 @@ button{min-height:44px;-webkit-tap-highlight-color:transparent}
 .writer-ink{pointer-events:auto;cursor:crosshair;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .local-writer-tools{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px}
 .local-writer-status{margin-top:8px;text-align:center;color:var(--muted);font-size:12px;line-height:1.4;min-height:18px}
-.writer-hint-card{display:none;align-items:center;gap:10px;margin:10px auto 0;width:min(500px,100%);padding:10px 12px;background:var(--panel-soft);border:1px solid var(--line);border-radius:16px;color:var(--text)}
-.writer-hint-card.show{display:flex}
-.writer-hint-glyph{width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:14px;background:var(--bg2);border:1px solid var(--line);font-size:34px;font-weight:900;animation:hintPulse 1.1s ease-in-out 2}
-.writer-hint-card b{font-size:13px}
-.writer-hint-card div{font-size:11px;color:var(--muted);line-height:1.35}
-@keyframes hintPulse{0%,100%{transform:scale(.96);opacity:.62}50%{transform:scale(1.04);opacity:1}}
 .writer-undo{min-width:108px}
+.writer-hint-pulse{animation:hintPulse 1.1s ease-in-out 2}
+@keyframes hintPulse{0%,100%{opacity:.2}50%{opacity:.9}}
 .writer-hint.active{color:var(--accent);font-weight:800}
 .writer-mobile-note{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
 .pet-home-stage{position:relative;width:116px;height:116px;display:grid;place-items:center;z-index:2}
@@ -213,6 +209,7 @@ let currentSession=null;
 let currentQuestion=null;
 let canvas=null,ctx=null,drawing=false,hasInk=false;
 let strokeHistory=[];
+let writingHintRaf=0,writingHintUntil=0;
 let bossSession=null;
 let pendingWritingHint=false;
 let lastBossRecommendations=[];
@@ -735,19 +732,61 @@ function finishBoss(){const b=bossSession,total=b.plan.length,pct=Math.round(b.c
 
 function destroyWriter(){
   if(writerInstance){try{writerInstance.cancelQuiz()}catch(e){}writerInstance=null;}
+  if(writingHintRaf){cancelAnimationFrame(writingHintRaf);writingHintRaf=0;}
+  writingHintUntil=0;
   if(canvas){canvas.onpointerdown=canvas.onpointermove=canvas.onpointerup=canvas.onpointercancel=canvas.ontouchstart=canvas.ontouchmove=canvas.ontouchend=null;canvas=null;ctx=null;}
   strokeHistory=[];
 }
 let writerInstance=null;
-function drawLocalGuide(word,animate=false,showTarget=false){
+function drawLocalGuide(word){
   const guide=document.getElementById('writerGuide');if(!guide)return;
   const g=guide.getContext('2d');g.clearRect(0,0,guide.width,guide.height);
   const w=guide.width,h=guide.height;
   g.strokeStyle='rgba(120,120,120,.14)';g.lineWidth=2;
   g.beginPath();g.moveTo(w/2,20);g.lineTo(w/2,h-20);g.moveTo(20,h/2);g.lineTo(w-20,h/2);g.stroke();
+  if(writingHintUntil>Date.now()){
+    const left=writingHintUntil-Date.now();
+    const progress=Math.max(0,Math.min(1,left/2300));
+    const opacity=0.34*Math.min(1,(2300-left)/420)*Math.min(1,left/700);
+    let size=Math.min(w*0.68,h*0.68);
+    g.textAlign='center';g.textBaseline='middle';
+    g.font=`900 ${size}px "PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans CJK","Microsoft YaHei",sans-serif`;
+    while(g.measureText(word.hanzi).width>w*0.76&&size>120){
+      size-=8;
+      g.font=`900 ${size}px "PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans CJK","Microsoft YaHei",sans-serif`;
+    }
+    g.save();
+    g.globalAlpha=opacity;
+    g.fillStyle='rgba(186,122,61,1)';
+    g.fillText(word.hanzi,w/2,h/2+6);
+    g.globalAlpha=opacity*.35;
+    g.strokeStyle='rgba(255,255,255,.9)';
+    g.lineWidth=3;
+    g.strokeText(word.hanzi,w/2,h/2+6);
+    g.restore();
+  }
+}
+function stopWritingHint(){
+  writingHintUntil=0;
+  if(writingHintRaf){cancelAnimationFrame(writingHintRaf);writingHintRaf=0;}
+  const q=currentQuestion?.word;if(q)drawLocalGuide(q);
+}
+function runWritingHint(){
+  const q=currentQuestion?.word;if(!q)return;
+  const tick=()=>{
+    drawLocalGuide(q);
+    if(writingHintUntil>Date.now()){
+      writingHintRaf=requestAnimationFrame(tick);
+    }else{
+      writingHintRaf=0;
+      drawLocalGuide(q);
+    }
+  };
+  if(writingHintRaf)cancelAnimationFrame(writingHintRaf);
+  writingHintRaf=requestAnimationFrame(tick);
 }function setupLocalWriter(word,isBoss=false){
   const target=document.getElementById('hanziWriter');if(!target)return;
-  target.innerHTML=`<div class="writer-stage"><canvas id="writerGuide" class="writer-guide" width="640" height="640"></canvas><canvas id="writeCanvas" class="writer-ink" width="640" height="640"></canvas></div><div id="writerHintCard" class="writer-hint-card"><div id="writerHintGlyph" class="writer-hint-glyph">${esc(word.hanzi.slice(0,1))}</div><div><b>Запомни форму</b><div>Короткая визуальная вспышка вместо контура. После неё попробуй написать сам.</div></div></div><div class="local-writer-tools"><button class="secondary" data-action="localHint">👁️ Показать подсказку</button><button class="secondary writer-undo" data-action="undoStroke" disabled>↶ Назад</button><button class="ghost" data-action="writerRestart">🔄 Заново</button></div><div id="localWriterStatus" class="local-writer-status">Поле готово. Здесь нет готового иероглифа — сначала попробуй по значению.</div><div class="local-writer-tools"><button class="primary" data-action="checkWriting">Проверить</button></div>`;
+  target.innerHTML=`<div class="writer-stage"><canvas id="writerGuide" class="writer-guide" width="640" height="640"></canvas><canvas id="writeCanvas" class="writer-ink" width="640" height="640"></canvas></div><div class="local-writer-tools"><button class="secondary" data-action="localHint">👁️ Показать подсказку</button><button class="secondary writer-undo" data-action="undoStroke" disabled>↶ Назад</button><button class="ghost" data-action="writerRestart">🔄 Заново</button></div><div id="localWriterStatus" class="local-writer-status">Поле готово. Здесь нет готового иероглифа — сначала попробуй по значению.</div><div class="local-writer-tools"><button class="primary" data-action="checkWriting">Проверить</button></div>`;
   canvas=document.getElementById('writeCanvas');ctx=canvas.getContext('2d',{willReadFrequently:true});drawing=false;hasInk=false;strokeHistory=[];
   ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--text').trim()||'#222';ctx.lineWidth=12;
   drawLocalGuide(word,false,false);
@@ -755,6 +794,7 @@ function drawLocalGuide(word,animate=false,showTarget=false){
   const pos=(clientX,clientY)=>{const r=canvas.getBoundingClientRect();return {x:(clientX-r.left)*canvas.width/r.width,y:(clientY-r.top)*canvas.height/r.height}};
   const updateUndo=()=>{const btn=document.querySelector('[data-action="undoStroke"]');if(btn)btn.disabled=strokeHistory.length===0};
   const begin=(clientX,clientY,pressure=.5)=>{
+    stopWritingHint();
     const p=pos(clientX,clientY);
     strokeHistory.push(ctx.getImageData(0,0,canvas.width,canvas.height));
     drawing=true;hasInk=true;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineWidth=Math.max(7,Math.min(18,8+pressure*8));
@@ -775,11 +815,9 @@ function setupWriting(word,isBoss=false){destroyWriter();setupLocalWriter(word,i
 function writerHint(){localHint()}
 function localHint(){
   const q=currentQuestion?.word;if(!q)return;
-  const card=document.getElementById('writerHintCard');
-  const glyph=document.getElementById('writerHintGlyph');
-  if(card){card.classList.add('show');setTimeout(()=>card.classList.remove('show'),2400);}
-  if(glyph){glyph.textContent=q.hanzi.slice(0,1);glyph.style.animation='none';void glyph.offsetWidth;glyph.style.animation='hintPulse 1.1s ease-in-out 2';}
-  const st=document.getElementById('localWriterStatus');if(st)st.textContent='Подсказка показана на несколько секунд: запомни форму и попробуй написать самостоятельно.';
+  writingHintUntil=Date.now()+2300;
+  runWritingHint();
+  const st=document.getElementById('localWriterStatus');if(st)st.textContent='Подсказка показана прямо на поле. Запомни форму и продолжай писать.';
 }
 function writerRestart(){if(currentQuestion?.word)setupWriting(currentQuestion.word,!!bossSession)}
 function finishWriterQuiz(summary,isBoss){
@@ -799,7 +837,7 @@ function undoWritingStroke(){
   const btn=document.querySelector('[data-action="undoStroke"]');if(btn)btn.disabled=strokeHistory.length===0;
   const st=document.getElementById('localWriterStatus');if(st)st.textContent=strokeHistory.length?'Последний штрих отменён.':'Последний штрих отменён — поле пустое.';
 }
-function clearCanvas(){if(!canvas||!ctx)return;ctx.clearRect(0,0,canvas.width,canvas.height);hasInk=false;strokeHistory=[];const btn=document.querySelector('[data-action="undoStroke"]');if(btn)btn.disabled=true;const st=document.getElementById('localWriterStatus');if(st)st.textContent='Поле очищено.';if(currentQuestion?.word)drawLocalGuide(currentQuestion.word,false,false)}
+function clearCanvas(){if(!canvas||!ctx)return;stopWritingHint();ctx.clearRect(0,0,canvas.width,canvas.height);hasInk=false;strokeHistory=[];const btn=document.querySelector('[data-action="undoStroke"]');if(btn)btn.disabled=true;const st=document.getElementById('localWriterStatus');if(st)st.textContent='Поле очищено.';if(currentQuestion?.word)drawLocalGuide(currentQuestion.word)}
 function inkBitmap(c,size=40){const src=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let minX=c.width,minY=c.height,maxX=-1,maxY=-1;for(let y=0;y<c.height;y+=2){for(let x=0;x<c.width;x+=2){const a=src[(y*c.width+x)*4+3];if(a>25){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y)}}}if(maxX<0)return null;const pad=18;minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);maxX=Math.min(c.width-1,maxX+pad);maxY=Math.min(c.height-1,maxY+pad);const out=document.createElement('canvas');out.width=size;out.height=size;const oc=out.getContext('2d');const srcW=maxX-minX+1,srcH=maxY-minY+1;const scale=Math.min((size-4)/srcW,(size-4)/srcH);const dx=(size-srcW*scale)/2,dy=(size-srcH*scale)/2;oc.drawImage(c,minX,minY,srcW,srcH,dx,dy,srcW*scale,srcH*scale);const data=oc.getImageData(0,0,size,size).data;return {size,data};}
 function glyphBitmap(char,size=40){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='#000';g.textAlign='center';g.textBaseline='middle';g.font='110px "PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei",sans-serif';g.fillText(char,64,68);return inkBitmap(c,size)}
 function bitmapScore(a,b){if(!a||!b)return 0;let overlap=0,ua=0,ub=0;const s=a.size;for(let i=0;i<s*s;i++){const av=a.data[i*4+3]>20,bv=b.data[i*4+3]>20;if(av)ua++;if(bv)ub++;if(av&&bv)overlap++;}if(!ua||!ub)return 0;const j=overlap/(ua+ub-overlap);const ratio=Math.min(ua,ub)/Math.max(ua,ub);return Math.min(1,j*.84+ratio*.16)}
