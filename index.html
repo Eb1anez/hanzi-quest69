@@ -373,19 +373,25 @@ function petToyReact(){const id=state.pet.activeToy;if(id==='toy_ball')petReact(
 function petSvg(type=state.pet.activePet){
   const pets={
     cat:`<svg class="pet pet-cat" viewBox="0 0 220 220" aria-label="Котёнок" role="img">
-      <path class="pet-tail" d="M48 151 C18 160 20 201 62 188" fill="none" stroke="#b87558" stroke-width="16" stroke-linecap="round"/>
-      <path d="M63 69 L68 31 Q70 16 83 26 L99 45 Q110 42 121 45 L137 26 Q150 16 152 31 L157 69" fill="#e6ae85" stroke="#805844" stroke-width="6" stroke-linejoin="round"/>
-      <ellipse cx="110" cy="110" rx="70" ry="64" fill="#f0c6a3" stroke="#805844" stroke-width="6"/>
-      <g transform="translate(0 18)">
-      <path d="M68 134 Q110 154 152 134 Q147 181 110 187 Q73 181 68 134Z" fill="#e5ad82" stroke="#805844" stroke-width="6"/>
-      <path d="M82 163 Q72 177 87 183" fill="#f0c6a3" stroke="#805844" stroke-width="5"/><path d="M138 163 Q148 177 133 183" fill="#f0c6a3" stroke="#805844" stroke-width="5"/>
-      <path d="M95 158 Q110 166 125 158" fill="none" stroke="#b36f56" stroke-width="4" stroke-linecap="round"/>
-      </g>
-      <ellipse cx="84" cy="106" rx="8" ry="10" fill="#2f3038"/><ellipse cx="136" cy="106" rx="8" ry="10" fill="#2f3038"/>
-      <circle cx="86" cy="103" r="2.4" fill="#fff"/><circle cx="138" cy="103" r="2.4" fill="#fff"/>
-      <path d="M103 120 Q110 127 117 120" fill="none" stroke="#67453e" stroke-width="5" stroke-linecap="round"/>
-      <circle cx="78" cy="124" r="6" fill="#ef9aa0" opacity=".42"/><circle cx="142" cy="124" r="6" fill="#ef9aa0" opacity=".42"/>
-      <path d="M79 117 L49 112 M79 124 L48 126 M141 117 L171 112 M141 124 L172 126" stroke="#805844" stroke-width="3" stroke-linecap="round"/>
+      <path class="pet-tail" d="M55 170 C20 166 22 200 52 199 C66 198 72 189 74 181" fill="none" stroke="#b87558" stroke-width="15" stroke-linecap="round"/>
+      <path d="M61 66 L66 27 Q68 13 80 25 L96 43 Q109 39 124 43 L140 25 Q152 13 154 27 L159 66" fill="#e6ae85" stroke="#805844" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M50 78 Q57 45 110 43 Q163 45 170 78 Q177 109 158 133 Q141 156 110 157 Q79 156 62 133 Q43 109 50 78Z" fill="#f0c6a3" stroke="#805844" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M96 52 Q101 66 104 73 M110 48 Q110 64 110 73 M124 52 Q119 66 116 73" fill="none" stroke="#c98c62" stroke-width="5" stroke-linecap="round"/>
+      <path d="M72 91 Q84 81 96 91 Q86 104 74 98Z" fill="#fff3df" stroke="#805844" stroke-width="4"/>
+      <path d="M124 91 Q136 81 148 91 Q146 98 136 101 Q130 100 124 91Z" fill="#fff3df" stroke="#805844" stroke-width="4"/>
+      <ellipse cx="86" cy="94" rx="5.5" ry="9" fill="#6c593c"/><ellipse cx="134" cy="94" rx="5.5" ry="9" fill="#6c593c"/>
+      <ellipse cx="86" cy="94" rx="1.8" ry="7" fill="#2f3038"/><ellipse cx="134" cy="94" rx="1.8" ry="7" fill="#2f3038"/>
+      <circle cx="84" cy="91" r="2.2" fill="#fff"/><circle cx="132" cy="91" r="2.2" fill="#fff"/>
+      <path d="M110 109 L104 105 Q110 99 116 105Z" fill="#e9979d" stroke="#805844" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M110 109 Q107 117 100 117 M110 109 Q113 117 120 117" fill="none" stroke="#67453e" stroke-width="4" stroke-linecap="round"/>
+      <path d="M80 111 Q88 106 96 111 M140 111 Q132 106 124 111" fill="none" stroke="#b36f56" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="70" cy="112" r="5.5" fill="#ef9aa0" opacity=".45"/><circle cx="150" cy="112" r="5.5" fill="#ef9aa0" opacity=".45"/>
+      <path d="M76 105 L48 100 M77 112 L46 112 M78 119 L49 124 M144 105 L172 100 M143 112 L174 112 M142 119 L171 124" stroke="#805844" stroke-width="3" stroke-linecap="round"/>
+      <path d="M70 151 Q82 142 96 151 Q110 157 124 151 Q138 142 150 151 L151 192 Q145 211 125 211 L95 211 Q75 211 69 192Z" fill="#e5ad82" stroke="#805844" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M94 154 Q110 174 126 154 L129 177 Q122 188 110 191 Q98 188 91 177Z" fill="#f0c6a3" opacity=".9"/>
+      <path d="M81 182 Q74 193 82 205 Q88 211 98 205 L99 188" fill="#f0c6a3" stroke="#805844" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M139 182 Q146 193 138 205 Q132 211 122 205 L121 188" fill="#f0c6a3" stroke="#805844" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M89 201 Q94 207 100 205 M131 205 Q126 207 120 201" fill="none" stroke="#b36f56" stroke-width="3.5" stroke-linecap="round"/>
     </svg>`,
     panda:`<svg class="pet pet-panda" viewBox="0 0 220 220" aria-label="Панда" role="img">
       <circle cx="68" cy="55" r="24" fill="#282b32"/><circle cx="152" cy="55" r="24" fill="#282b32"/>
