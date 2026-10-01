@@ -389,8 +389,6 @@ function petSvg(type=state.pet.activePet){
       <path d="M103 120 Q110 127 117 120" fill="none" stroke="#67453e" stroke-width="5" stroke-linecap="round"/>
       <circle cx="78" cy="124" r="6" fill="#ef9aa0" opacity=".42"/><circle cx="142" cy="124" r="6" fill="#ef9aa0" opacity=".42"/>
       <path d="M79 117 L49 112 M79 124 L48 126 M141 117 L171 112 M141 124 L172 126" stroke="#805844" stroke-width="3" stroke-linecap="round"/>
-      <g transform="translate(0 18)"><path d="M82 163 Q72 177 87 183" fill="#f0c6a3" stroke="#805844" stroke-width="5"/><path d="M138 163 Q148 177 133 183" fill="#f0c6a3" stroke="#805844" stroke-width="5"/>
-      <path d="M95 158 Q110 166 125 158" fill="none" stroke="#b36f56" stroke-width="4" stroke-linecap="round"/></g>
     </svg>`,
     panda:`<svg class="pet pet-panda" viewBox="0 0 220 220" aria-label="Панда" role="img">
       <circle cx="68" cy="55" r="24" fill="#282b32"/><circle cx="152" cy="55" r="24" fill="#282b32"/>
@@ -738,6 +736,7 @@ function finishBoss(){const b=bossSession,total=b.plan.length,pct=Math.round(b.c
 function destroyWriter(){
   if(writerInstance){try{writerInstance.cancelQuiz()}catch(e){}writerInstance=null;}
   if(canvas){canvas.onpointerdown=canvas.onpointermove=canvas.onpointerup=canvas.onpointercancel=canvas.ontouchstart=canvas.ontouchmove=canvas.ontouchend=null;canvas=null;ctx=null;}
+  strokeHistory=[];
 }
 let writerInstance=null;
 function drawLocalGuide(word,animate=false,showTarget=false){
@@ -746,29 +745,9 @@ function drawLocalGuide(word,animate=false,showTarget=false){
   const w=guide.width,h=guide.height;
   g.strokeStyle='rgba(120,120,120,.14)';g.lineWidth=2;
   g.beginPath();g.moveTo(w/2,20);g.lineTo(w/2,h-20);g.moveTo(20,h/2);g.lineTo(w-20,h/2);g.stroke();
-  const fitFont=()=>{let size=Math.min(w*0.68,h*0.68);g.font=`900 ${size}px "PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans CJK","Microsoft YaHei",sans-serif`;while(g.measureText(word.hanzi).width>w*0.76&&size>120){size-=8;g.font=`900 ${size}px "PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans CJK","Microsoft YaHei",sans-serif`};return size};
-  fitFont();g.textAlign='center';g.textBaseline='middle';
-  if(showTarget){
-    const pulse=animate ? (0.15+0.06*Math.sin(Date.now()/160)) : 0.15;
-    g.fillStyle=`rgba(186,122,61,${pulse})`;
-    g.fillText(word.hanzi,w/2,h/2+6);
-    if(animate){
-      g.save();
-      g.globalAlpha=.26;
-      const bandX=((Date.now()/8)%(w+220))-110;
-      g.fillStyle='rgba(255,255,255,.9)';
-      g.fillRect(bandX,70,48,h-140);
-      g.globalCompositeOperation='destination-in';
-      g.font=g.font;
-      g.fillStyle='#000';
-      g.fillText(word.hanzi,w/2,h/2+6);
-      g.restore();
-    }
-  }
-}
-function setupLocalWriter(word,isBoss=false){
+}function setupLocalWriter(word,isBoss=false){
   const target=document.getElementById('hanziWriter');if(!target)return;
-  target.innerHTML=`<div class="writer-stage"><canvas id="writerGuide" class="writer-guide" width="640" height="640"></canvas><canvas id="writeCanvas" class="writer-ink" width="640" height="640"></canvas></div><div id="writerHintCard" class="writer-hint-card"><div id="writerHintGlyph" class="writer-hint-glyph">${esc(word.hanzi.slice(0,1))}</div><div><b>Визуальная подсказка</b><div>Не контур: короткий «взгляд-образ». Запомни форму, затем попробуй написать сам.</div></div></div><div class="local-writer-tools"><button class="secondary" data-action="localHint">👁️ Показать подсказку</button><button class="secondary writer-undo" data-action="undoStroke" disabled>↶ Назад</button><button class="ghost" data-action="writerRestart">🔄 Заново</button></div><div id="localWriterStatus" class="local-writer-status">Поле готово. Здесь нет готового иероглифа — сначала попробуй по значению.</div><div class="local-writer-tools"><button class="primary" data-action="checkWriting">Проверить</button></div>`;
+  target.innerHTML=`<div class="writer-stage"><canvas id="writerGuide" class="writer-guide" width="640" height="640"></canvas><canvas id="writeCanvas" class="writer-ink" width="640" height="640"></canvas></div><div id="writerHintCard" class="writer-hint-card"><div id="writerHintGlyph" class="writer-hint-glyph">${esc(word.hanzi.slice(0,1))}</div><div><b>Запомни форму</b><div>Короткая визуальная вспышка вместо контура. После неё попробуй написать сам.</div></div></div><div class="local-writer-tools"><button class="secondary" data-action="localHint">👁️ Показать подсказку</button><button class="secondary writer-undo" data-action="undoStroke" disabled>↶ Назад</button><button class="ghost" data-action="writerRestart">🔄 Заново</button></div><div id="localWriterStatus" class="local-writer-status">Поле готово. Здесь нет готового иероглифа — сначала попробуй по значению.</div><div class="local-writer-tools"><button class="primary" data-action="checkWriting">Проверить</button></div>`;
   canvas=document.getElementById('writeCanvas');ctx=canvas.getContext('2d',{willReadFrequently:true});drawing=false;hasInk=false;strokeHistory=[];
   ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--text').trim()||'#222';ctx.lineWidth=12;
   drawLocalGuide(word,false,false);
@@ -796,10 +775,11 @@ function setupWriting(word,isBoss=false){destroyWriter();setupLocalWriter(word,i
 function writerHint(){localHint()}
 function localHint(){
   const q=currentQuestion?.word;if(!q)return;
-  drawLocalGuide(q,true,true);
-  const card=document.getElementById('writerHintCard');if(card)card.classList.add('show');
-  const glyph=document.getElementById('writerHintGlyph');if(glyph){glyph.textContent=q.hanzi.slice(0,1);glyph.style.animation='none';void glyph.offsetWidth;glyph.style.animation='hintPulse 1.1s ease-in-out 2';}
-  const st=document.getElementById('localWriterStatus');if(st)st.textContent='Подсказка показана ненадолго: запомни форму и продолжай писать самостоятельно.';
+  const card=document.getElementById('writerHintCard');
+  const glyph=document.getElementById('writerHintGlyph');
+  if(card){card.classList.add('show');setTimeout(()=>card.classList.remove('show'),2400);}
+  if(glyph){glyph.textContent=q.hanzi.slice(0,1);glyph.style.animation='none';void glyph.offsetWidth;glyph.style.animation='hintPulse 1.1s ease-in-out 2';}
+  const st=document.getElementById('localWriterStatus');if(st)st.textContent='Подсказка показана на несколько секунд: запомни форму и попробуй написать самостоятельно.';
 }
 function writerRestart(){if(currentQuestion?.word)setupWriting(currentQuestion.word,!!bossSession)}
 function finishWriterQuiz(summary,isBoss){
